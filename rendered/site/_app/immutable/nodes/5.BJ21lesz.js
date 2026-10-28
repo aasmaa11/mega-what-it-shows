@@ -1,0 +1,1 @@
+export{n as component}from"../chunks/ga4v6-0K.js";
