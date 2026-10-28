@@ -37,7 +37,7 @@ Exported 2026-10-04 from the `support` repo, `apps/kb/` → `src/`.
 
 ## This repo (MEGA.dev S01E03)
 
-- My page: `src/routes/kb/incidents/4471-split/+page.svx` (counts from `ProblemTable.svelte`, `groupByProblem` in `causes.ts`).
+- My page: `src/routes/kb/incidents/4471-split/+page.svx` (counts from `ProblemTable.svelte`, with the desk's own `groupByCause`).
 - The page as the desk sees it: `rendered/4471-split.png`, and the static site in `rendered/site/` (`rendered/site/kb/incidents/4471-split.html`).
 - The tickets: the issues of this repo, one per problem in #4471.
 - Render it yourself: `npm install`, then `npx vite build` (output in `build/`).

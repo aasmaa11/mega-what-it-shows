@@ -52,12 +52,8 @@ export function uniqueById(reports: Report[]): Report[] {
   return [...new Map(reports.map((r) => [r.id, r])).values()];
 }
 
-// A problem is what one fix repairs. Most reports follow their cause. The desk-noted one-day moves
-// (desk-notes.json) do not: a day/month swap never moves a date by one day, so they are their own.
-export type Problem = Cause | 'one-day' | 'unplaced';
-
-export type CauseGroup<K = Cause | 'unplaced'> = {
-  cause: K;
+export type CauseGroup = {
+  cause: Cause | 'unplaced';
   reports: Report[];
   // What intake tagged these reports as: tag → count.
   taggedAs: Record<string, number>;
@@ -68,21 +64,9 @@ export type CauseGroup<K = Cause | 'unplaced'> = {
 };
 
 export function groupByCause(reports: Report[], tenantOf: (r: Report) => Tenant | undefined): CauseGroup[] {
-  return groupBy(reports, (r) => causeOf(r, tenantOf(r)) ?? 'unplaced');
-}
-
-export function groupByProblem(
-  reports: Report[],
-  tenantOf: (r: Report) => Tenant | undefined,
-  oneDayMove: readonly string[],
-): CauseGroup<Problem>[] {
-  return groupBy(reports, (r) => (oneDayMove.includes(r.id) ? 'one-day' : (causeOf(r, tenantOf(r)) ?? 'unplaced')));
-}
-
-function groupBy<K>(reports: Report[], keyOf: (r: Report) => K): CauseGroup<K>[] {
-  const byCause = new Map<K, Report[]>();
+  const byCause = new Map<CauseGroup['cause'], Report[]>();
   for (const r of reports) {
-    const cause = keyOf(r);
+    const cause = causeOf(r, tenantOf(r)) ?? 'unplaced';
     byCause.set(cause, [...(byCause.get(cause) ?? []), r]);
   }
   return [...byCause.entries()]
@@ -108,6 +92,6 @@ export function ticketCause(groups: CauseGroup[], ticket: number): CauseGroup['c
 
 // Reports the desk read differently from their cause (desk-notes.json): counted where they're filed,
 // footnoted under it.
-export function readAs(g: CauseGroup<unknown>, ids: readonly string[]): number {
+export function readAs(g: CauseGroup, ids: readonly string[]): number {
   return g.reports.filter((r) => ids.includes(r.id)).length;
 }

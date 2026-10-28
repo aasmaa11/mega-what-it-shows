@@ -46,7 +46,9 @@ count.
   each id once.
 - The intake tag is not the cause. Intake guesses from the browser locale and never looks up the
   tenant. The cause comes from the tenant's locale and booking form (`causes.ts`).
-- The one-day moves come from the desk's own reading of the report text (`desk-notes.json`).
+- The counts are the desk's view, as exported: each report counts where the desk filed it. The
+  one-day moves come from the desk's own reading of the report text (`desk-notes.json`). They stay
+  filed under `parser` too, so the `parser` count includes them.
 
 ## What to do next
 
