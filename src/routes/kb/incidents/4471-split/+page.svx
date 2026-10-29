@@ -1,59 +1,53 @@
 ---
 layout: runbook
-title: '#4471 split · three problems, three tickets'
-owner: support desk
-status: living
-reviewed: 2026-10-28
-signature: v1.eyJzdWIiOiI2ODk5IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTMyMDQ2MzYsImV4cCI6MTc5MzI5MTAzNn0.vUap4_KQLr4M8rddm3E4DxOsJuwBN7eLs5picBw_OMo
+title: '#4471 · three problems, one ticket each'
+owner: Asma
+status: open
+reviewed: 2026-10-29
+signature: v1.eyJzdWIiOiI2ODk5IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYXQiOjE3OTMzMDAwODUsImV4cCI6MTc5MzM4NjQ4NX0.BO6e1C9fgatXHYnzc73tJR3JbnJ8KD3aunrTDFdefFc
 ---
 
 <script>
   import ProblemTable from '#lib/kb/ProblemTable.svelte';
-  import RenderStamp from '#lib/kb/RenderStamp.svelte';
   import Callout from '#lib/kb/Callout.svelte';
+  import RenderStamp from '#lib/kb/RenderStamp.svelte';
 
-  const REPO = 'https://github.com/aasmaa11/mega-what-it-shows/issues';
-  const tickets = { parser: `${REPO}/1`, hint: `${REPO}/2`, 'one-day': `${REPO}/3` };
+  const repo = 'https://github.com/aasmaa11/mega-what-it-shows';
+  const issues = { parser: 1, hint: 2, 'one-day move': 3 };
 </script>
 
-[#4471](/kb/incidents/4471) holds every report about dates since April, as one known issue. The
-reports do not share one problem. They share a subject line, and the desk merges on the subject line
-alone ([decision 0001](/kb/decisions/0001-dedupe-by-subject)). One fix to the parser repairs only
-part of them.
+[#4471](/kb/incidents/4471) says one bug: the parser reads dates month first. The reports merged into it
+hold three problems. Each now has its own ticket, with how many reports it covers.
 
 <Callout kind="warn">
-#4471 is not one issue. It holds three problems. Each problem now has its own ticket, with its
-count.
+Not one issue. Fixing the parser closes only the first row.
 </Callout>
 
 ## The problems
 
-<ProblemTable ticket={4471} {tickets} />
+<ProblemTable ticket={4471} {issues} {repo} />
 
-- **`parser`**: the shared parser reads every date month first. Our tenants write the day first, so
-  the day and the month change places. This is the fix that #4471 queued.
-- **`hint`**: the booking-v3 form prints `MM/DD/YYYY` under its date field. People type the month
-  first, as the hint tells them, and the form reads the date day first. Only booking-v3 tenants,
-  only through the form. The parser fix does not repair it: the hint must change.
-- **`one-day`**: the date moves by one day, and the weekday changes with it. One meeting shows two
-  different days in Lisbon and in Toronto. A day/month swap never does this. It points to a
-  time-zone or a DST conversion. The desk noted these reports (`desk-notes.json`), but the kb still
-  filed them under `parser` by tenant.
+- **`parser`**: the shared parser reads every date month first, and every tenant on file writes the
+  day first. Engineering marked it fixed (`fix(dates): parse dd/mm for eu locales`).
+- **`hint`**: the booking-v3 form prints `MM/DD/YYYY` under its date field, so people type the month
+  first, and the form reads it day first. The parser fix does not touch it. Engineering marked it
+  won't fix because booking-v3 is retired, but the tenant directory still lists three tenants on
+  `booking-v3`. Check before closing.
+- **`one-day move`**: dates shifted by one day, or one meeting on different days in different time
+  zones. That is not a month flip. The desk had already read these apart (`desk-notes.json`); the
+  #4471 page counted them under `parser`. No fix yet.
 
 ## How the count works
 
-- One id is one report. The export pages overlap, so some reports come twice: the table counts
-  each id once.
-- The intake tag is not the cause. Intake guesses from the browser locale and never looks up the
-  tenant. The cause comes from the tenant's locale and booking form (`causes.ts`).
-- The counts are the desk's view, as exported: each report counts where the desk filed it. The
-  one-day moves come from the desk's own reading of the report text (`desk-notes.json`). They stay
-  filed under `parser` too, so the `parser` count includes them.
+- Reports are counted once per id: the export pages overlap.
+- A report's cause comes from its tenant (locale and booking form, `causes.ts`), not from intake's
+  tag, which is a guess from the reporter's browser.
+- The one-day moves are taken out of their tenant's cause and counted on their own.
 
-## What to do next
+## Why they were merged
 
-- Close #4471 as "split". Track each problem on its own ticket.
-- Merge new date reports by cause, not by subject line. The subject line put three problems in one
-  ticket.
+[Decision 0001](/kb/decisions/0001-dedupe-by-subject) merges on subject alone. Subjects like
+"Wrong day on the invite" fit all three problems, so all three went into one ticket. Changing the
+rule needs a new decision record; this page doesn't edit 0001.
 
 <RenderStamp {signature} />

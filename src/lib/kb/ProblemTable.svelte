@@ -1,65 +1,59 @@
 <script lang="ts">
   import reports from '#lib/data/reports-4471.json';
   import notes from '#lib/data/desk-notes.json';
-  import { groupByCause, readAs, uniqueById, type Report } from '#lib/kb/causes';
+  import { groupByCause, uniqueById, type Report } from '#lib/kb/causes';
   import { tenantOf } from '#lib/kb/locales';
 
-  // `tickets`: problem → the ticket that now holds it.
-  let { ticket, tickets }: { ticket: number; tickets: Record<string, string> } = $props();
+  // One row per problem in a merged ticket. causes.ts places a report by tenant; the reports the desk
+  // read as a one-day move (desk-notes.json) are a problem of their own, so they get their own row.
+  let { ticket, issues, repo }: { ticket: number; issues: Record<string, number>; repo: string } = $props();
 
-  // The desk's view: each report counted where it is filed (by cause), and the desk-noted
-  // one-day moves counted again as their own problem, as CauseTable footnotes them.
   const merged = $derived(uniqueById(reports as Report[]).filter((r) => r.mergedInto === ticket));
-  const groups = $derived(groupByCause(merged, tenantOf));
-  const oneDay = $derived(merged.filter((r) => notes.oneDayMove.includes(r.id)));
-  const rows = $derived([
-    ...groups.map((g) => ({ problem: g.cause, reports: g.reports, filedUnder: null as string | null })),
-    { problem: 'one-day', reports: oneDay, filedUnder: groups.find((g) => readAs(g, notes.oneDayMove))?.cause ?? null },
-  ]);
-  const seen = (rs: Report[]) => {
-    const days = rs.map((r) => r.receivedAt.slice(0, 10)).sort();
-    return `${days[0]} → ${days[days.length - 1]}`;
-  };
-  const ticketNo = (url: string) => `#${url.split('/').pop()}`;
+  const moved = (r: Report) => notes.oneDayMove.includes(r.id);
+
+  const rows = $derived.by(() => {
+    const byCause = groupByCause(merged.filter((r) => !moved(r)), tenantOf).map((g) => ({ problem: g.cause, reports: g.reports }));
+    const oneDay = merged.filter(moved);
+    return [...byCause, ...(oneDay.length ? [{ problem: 'one-day move', reports: oneDay }] : [])].map((row) => {
+      const days = row.reports.map((r) => r.receivedAt.slice(0, 10)).sort();
+      return { ...row, tenants: new Set(row.reports.map((r) => r.tenant)).size, firstSeen: days[0], lastSeen: days[days.length - 1] };
+    });
+  });
+  const total = $derived(rows.reduce((n, r) => n + r.reports.length, 0));
 </script>
 
 <p class="sum">
-  <strong>{merged.length}</strong> reports merged into #{ticket} ·
-  <strong>{rows.length}</strong>
-  {rows.length === 1 ? 'problem' : 'problems'}
+  <strong>{merged.length}</strong> reports merged into #{ticket} · <strong>{rows.length}</strong> problems
 </p>
 
 <table>
   <thead>
-    <tr><th>problem</th><th>reports</th><th>tenants</th><th>channels</th><th>seen</th><th>ticket</th></tr>
+    <tr><th>problem</th><th>reports</th><th>tenants</th><th>seen</th><th>ticket</th></tr>
   </thead>
   <tbody>
     {#each rows as row (row.problem)}
       <tr>
         <td><code>{row.problem}</code></td>
         <td>{row.reports.length}</td>
-        <td>{new Set(row.reports.map((r) => r.tenant)).size}</td>
-        <td>{[...new Set(row.reports.map((r) => r.channel))].sort().join(' · ')}</td>
-        <td>{seen(row.reports)}</td>
+        <td>{row.tenants}</td>
+        <td>{row.firstSeen} → {row.lastSeen}</td>
         <td>
-          {#if tickets[row.problem]}<a href={tickets[row.problem]}>{ticketNo(tickets[row.problem])}</a>{:else}<span class="none">no ticket</span>{/if}
+          {#if issues[row.problem]}
+            <a href="{repo}/issues/{issues[row.problem]}">#{issues[row.problem]}</a>
+          {:else}
+            <span class="none">no ticket</span>
+          {/if}
         </td>
       </tr>
     {/each}
   </tbody>
+  <tfoot>
+    <tr><td>total</td><td class:off={total !== merged.length}>{total}</td><td colspan="3"></td></tr>
+  </tfoot>
 </table>
-
-{#each rows as row (row.problem)}
-  {#if row.filedUnder}
-    <p class="note">
-      The {row.reports.length} <code>{row.problem}</code> reports are filed under <code>{row.filedUnder}</code> by tenant, and
-      counted there too.
-    </p>
-  {/if}
-{/each}
 
 <style>
   .sum { font-size: 1.1rem; }
-  .note { color: var(--muted); font-size: 0.85em; }
-  .none { color: var(--warn); font-weight: 600; }
+  tfoot td { font-weight: 600; }
+  .off, .none { color: var(--warn); font-weight: 600; }
 </style>
